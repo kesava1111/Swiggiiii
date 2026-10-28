@@ -1,0 +1,106 @@
+const express = require('express');
+const crypto = require('crypto');
+const app = express();
+
+app.use(express.json());
+
+// CORS for your domain
+app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', '*');
+    if (req.method === 'OPTIONS') return res.sendStatus(204);
+    next();
+});
+
+const DEVICES = [
+    { vendor: "GOOGLE", hardware: "Pixel 8", ver: "1940", sw: "4.140.0" },
+    { vendor: "SAMSUNG", hardware: "SM-S921B", ver: "1942", sw: "4.140.1" },
+    { vendor: "ONEPLUS", hardware: "CPH2573", ver: "1938", sw: "4.139.0" }
+];
+
+function genHex(len) {
+    return crypto.randomBytes(len).toString('hex');
+}
+
+function buildHeaders(deviceId) {
+    const d = DEVICES[Math.floor(Math.random() * DEVICES.length)];
+    const uid = deviceId || genHex(8);
+    return {
+        "user-agent": "Swiggy-Android",
+        "content-type": "application/json; charset=utf-8",
+        "accept": "application/json; charset=utf-8",
+        "version-code": d.ver,
+        "app-version": d.sw,
+        "manufacturer": d.vendor,
+        "model-name": d.hardware,
+        "swuid": uid,
+        "deviceid": uid
+    };
+}
+
+// OTP Request
+app.get('/api/otp', async (req, res) => {
+    const phone = req.query.mobile;
+    if (!phone || !/^\d{10}$/.test(phone)) {
+        return res.json({ statusCode: -1, statusMessage: "Invalid phone" });
+    }
+
+    const devId = genHex(8);
+    const headers = buildHeaders(devId);
+
+    try {
+        const resp = await fetch(`https://profile.swiggy.com/api/v3/app/sms_otp?mobile=${phone}`, {
+            method: 'GET',
+            headers: headers
+        });
+        const data = await resp.json();
+        data._devId = devId;
+        res.json(data);
+    } catch (err) {
+        res.json({ statusCode: -1, statusMessage: err.message });
+    }
+});
+
+// OTP Verify
+app.post('/api/verify', async (req, res) => {
+    const { otp, tid, sid, deviceId } = req.body;
+
+    const headers = buildHeaders(deviceId);
+    if (tid) headers["tid"] = tid;
+    if (sid) headers["sid"] = String(sid);
+
+    const payload = {
+        cloningSignalsData: {
+            appFilesDirPathInvalid: 0,
+            developerModeEnabled: 1,
+            deviceModelVmos: 0,
+            emulatorStatus: 0,
+            packageName: "in.swiggy.android",
+            workProfileEnabled: 0
+        },
+        otp: otp
+    };
+
+    try {
+        const resp = await fetch('https://profile.swiggy.com/api/v3/app/login/verify?otp_source=Sms-manual', {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(payload)
+        });
+        const data = await resp.json();
+        res.json(data);
+    } catch (err) {
+        res.json({ statusCode: -1, statusMessage: err.message });
+    }
+});
+
+// Serve Frontend
+app.get('/', (req, res) => {
+    res.sendFile(__dirname + '/index.html');
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});

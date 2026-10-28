@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swiggy Session Generator</title>
+    <style>
+        :root { --bg: #0a0a0a; --card: #141414; --accent: #fc8019; --text: #eaeaea; --muted: #777; --err: #ff3b3b; --ok: #00c853; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'SF Mono', 'Consolas', monospace; }
+        body { background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        .box { background: var(--card); width: 100%; max-width: 500px; padding: 30px; border-radius: 12px; border: 1px solid #222; box-shadow: 0 20px 40px rgba(0,0,0,0.8); }
+        h1 { font-size: 1.2rem; color: var(--accent); text-align: center; margin-bottom: 5px; letter-spacing: 2px; }
+        .sub { text-align: center; font-size: 0.75rem; color: var(--muted); margin-bottom: 25px; }
+        .view { display: none; }
+        .view.active { display: block; animation: fade 0.2s ease-out; }
+        @keyframes fade { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        label { font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+        input { width: 100%; padding: 14px; background: #000; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 1rem; outline: none; transition: border 0.2s; }
+        input:focus { border-color: var(--accent); }
+        button { width: 100%; padding: 14px; background: var(--accent); border: none; border-radius: 6px; color: #000; font-weight: 800; font-size: 0.9rem; cursor: pointer; margin-top: 20px; text-transform: uppercase; letter-spacing: 1px; }
+        button:hover { filter: brightness(1.1); }
+        button:disabled { background: #222; color: #555; cursor: not-allowed; }
+        .log { margin-top: 25px; padding: 15px; background: #000; border-radius: 6px; font-size: 0.75rem; color: var(--muted); height: 150px; overflow-y: auto; border: 1px solid #1a1a1a; line-height: 1.6; }
+        .log .e { color: var(--err); }
+        .log .s { color: var(--ok); }
+        .log .i { color: var(--accent); }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <h1>SWIGGY SESSION GEN</h1>
+    <p class="sub">premium automation panel</p>
+
+    <div id="v1" class="view active">
+        <label>Mobile Number (10 digits)</label>
+        <input type="text" id="inPhone" placeholder="9876543210" maxlength="10">
+        <button id="btn1" onclick="sendOtp()">Request OTP</button>
+    </div>
+
+    <div id="v2" class="view">
+        <label>OTP for <span id="showNum" style="color:var(--accent)"></span></label>
+        <input type="text" id="inOtp" placeholder="Enter OTP" maxlength="6">
+        <button id="btn2" onclick="verifyOtp()">Verify & Generate</button>
+    </div>
+
+    <div class="log" id="logs"></div>
+</div>
+
+<script>
+    const API = window.location.origin;
+    let state = {};
+
+    function out(msg, cls) {
+        const el = document.getElementById("logs");
+        el.innerHTML += '<div class="' + cls + '">> ' + msg + '</div>';
+        el.scrollTop = el.scrollHeight;
+    }
+
+    function go(id) {
+        document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+        document.getElementById(id).classList.add("active");
+    }
+
+    function decodeJwt(jwt) {
+        try {
+            const p = jwt.split(".")[1];
+            if (!p) return {};
+            let b = p.replace(/-/g, '+').replace(/_/g, '/');
+            while (b.length % 4) b += '=';
+            return JSON.parse(decodeURIComponent(atob(b).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
+        } catch { return {}; }
+    }
+
+    async function sendOtp() {
+        const ph = document.getElementById("inPhone").value.trim();
+        if (!/^\d{10}$/.test(ph)) return out("Invalid number. Need 10 digits.", "e");
+
+        const btn = document.getElementById("btn1");
+        btn.disabled = true;
+        out("Requesting OTP for " + ph + "...", "i");
+
+        try {
+            const r = await fetch(API + "/api/otp?mobile=" + ph);
+            const d = await r.json();
+
+            if (d.statusCode === 0) {
+                let tid = d.tid;
+                let sid = d.sid;
+                if (!sid && tid) sid = decodeJwt(tid).sid;
+
+                state = { phone: ph, tid: tid, sid: sid, deviceId: d.deviceId || d._devId };
+                out("OTP sent successfully!", "s");
+                document.getElementById("showNum").innerText = ph;
+                go("v2");
+            } else {
+                out("Failed: " + (d.statusMessage || 'Unknown error'), "e");
+            }
+        } catch (err) {
+            out("Network error: " + err.message, "e");
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    async function verifyOtp() {
+        const otp = document.getElementById("inOtp").value.trim();
+        if (!/^\d{4,6}$/.test(otp)) return out("Enter valid OTP.", "e");
+
+        const btn = document.getElementById("btn2");
+        btn.disabled = true;
+        out("Verifying OTP...", "i");
+
+        try {
+            const r = await fetch(API + "/api/verify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ otp: otp, tid: state.tid, sid: state.sid, deviceId: state.deviceId })
+            });
+            const d = await r.json();
+
+            if (d.statusCode !== 0) {
+                out("Verification failed: " + (d.statusMessage || 'Bad OTP'), "e");
+                btn.disabled = false;
+                return;
+            }
+
+            const sess = {};
+            const inner = typeof d.data === "object" ? d.data : {};
+            ["token", "tid", "sid"].forEach(k => {
+                if (inner[k]) sess[k] = inner[k];
+                else if (d[k]) sess[k] = d[k];
+            });
+
+            sess.deviceId = String(d.deviceId || state.deviceId);
+            const uid = decodeJwt(sess.tid || "").user_id;
+
+            if (!uid) {
+                out("Incomplete session. Missing user_id.", "e");
+                btn.disabled = false;
+                return;
+            }
+
+            sess.userid = String(uid);
+            sess.mobile = state.phone;
+            if (!sess.customerId) sess.customerId = sess.userid;
+
+            out("Login successful! Downloading...", "s");
+
+            const blob = new Blob([JSON.stringify(sess, null, 4)], { type: "application/json" });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = "swiggy_session_" + sess.mobile + ".json";
+            a.click();
+            URL.revokeObjectURL(a.href);
+
+            out("File downloaded.", "s");
+        } catch (err) {
+            out("Network error: " + err.message, "e");
+            btn.disabled = false;
+        }
+    }
+</script>
+
+</body>
+</html>
