@@ -156,6 +156,8 @@
                 state = {};
                 document.getElementById("inPhone").value = "";
                 document.getElementById("inOtp").value = "";
+                document.getElementById("btn1").disabled = false; // FIX: Re-enable button
+                document.getElementById("btn2").disabled = false; // FIX: Re-enable button
                 setStatus("");
                 go("v1");
             }, 3000);
