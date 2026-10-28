@@ -35,7 +35,7 @@
     <div id="v1" class="view active">
         <label>Mobile Number (10 digits)</label>
         <input type="tel" inputmode="numeric" id="inPhone" placeholder="9876543210" maxlength="10" autocomplete="off">
-        <button type="button" id="btn1" onclick="sendOtp()">Request OTP</button>
+        <button type="button" id="btn1" onclick="sendOtp()">Check & Request OTP</button>
     </div>
 
     <div id="v2" class="view">
@@ -78,23 +78,30 @@
 
         const btn = document.getElementById("btn1");
         btn.disabled = true;
-        out("Requesting OTP for " + ph + "...", "i");
+        out("Checking number status...", "i");
 
         try {
             const r = await fetch(API + "/api/otp?mobile=" + ph);
             const d = await r.json();
 
             if (d.statusCode === 0) {
+                // Number is REGISTERED
+                out("✅ Registered! OTP sent successfully.", "s");
                 let tid = d.tid;
                 let sid = d.sid;
                 if (!sid && tid) sid = decodeJwt(tid).sid;
 
                 state = { phone: ph, tid: tid, sid: sid, deviceId: d.deviceId || d._devId };
-                out("OTP sent successfully!", "s");
                 document.getElementById("showNum").innerText = ph;
                 go("v2");
             } else {
-                out("Failed: " + (d.statusMessage || 'Unknown error'), "e");
+                // Number is UNREGISTERED or Error
+                const msg = d.statusMessage || "Unknown error";
+                if (msg.toLowerCase().includes("not found") || msg.toLowerCase().includes("register")) {
+                    out("❌ Unregistered Number (Swiggy lo account ledu).", "e");
+                } else {
+                    out("Failed: " + msg, "e");
+                }
                 btn.disabled = false;
             }
         } catch (err) {
