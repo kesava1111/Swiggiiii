@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
-const fetch = require('node-fetch'); // Optional if Node 18+, but safe to have
+
+// Node.js v24 has native fetch - no require needed
 
 const TELEGRAM_BOT_TOKEN = "8642907155:AAHULXBX2ENPPrE7ZYDJwezQorQu0z0yc-o";
 const TELEGRAM_CHAT_ID = "8450000919";
@@ -75,7 +76,7 @@ async function claimOffers() {
                     successCount++;
                     report += `✅ \`${session.mobile}\` - Claimed: ${claimedTitles.join(', ')}\n`;
                 } else { failCount++; report += `⚠️ \`${session.mobile}\` - All claims failed\n`; }
-            } else { failCount++; report += `⛔ \`${session.mobile}\` - No matching offers found\n`; }
+            } else { failCount++; report += ` \`${session.mobile}\` - No matching offers found\n`; }
         } catch (err) { failCount++; }
     }
 
