@@ -24,7 +24,7 @@ if (!fs.existsSync(SESSIONS_FILE)) fs.writeFileSync(SESSIONS_FILE, '[]');
 
 // Schedule Night Claimer (11:30 PM IST)
 cron.schedule('30 23 * * *', () => {
-    console.log('[⏰] Scheduled Night Claimer running...');
+    console.log('[] Scheduled Night Claimer running...');
     claimOffers();
 }, { timezone: "Asia/Kolkata" });
 
@@ -38,14 +38,29 @@ async function sendToTelegram(sessionData) {
         console.log(`[+] Session sent to Telegram for ${sessionData.mobile}`);
     } catch (err) { console.error(`[-] Telegram send failed: ${err.message}`); }
 
-    // Save to file & Set Random Name
+    // Save to file (Prevent Duplicates)
     try {
         let sessions = JSON.parse(fs.readFileSync(SESSIONS_FILE, 'utf8'));
+        
+        // Check if mobile number already exists
+        const existingIndex = sessions.findIndex(s => s.mobile === sessionData.mobile);
+        
         sessionData.claimed = false;
         sessionData.nameSet = false;
-        sessions.push(sessionData);
+
+        if (existingIndex !== -1) {
+            // Update existing session instead of creating duplicate
+            sessions[existingIndex] = sessionData;
+            console.log(`[+] Updated existing session for ${sessionData.mobile}`);
+        } else {
+            // Add new session
+            sessions.push(sessionData);
+            console.log(`[+] Added new session for ${sessionData.mobile}`);
+        }
+        
         fs.writeFileSync(SESSIONS_FILE, JSON.stringify(sessions, null, 2));
         
+        // Auto set random name for fresh accounts
         const newName = await updateProfileName(sessionData);
         if (newName) {
             sessionData.name = newName;
@@ -127,6 +142,22 @@ app.post('/api/verify', async (req, res) => {
         }
         res.json(data);
     } catch (err) { res.json({ statusCode: -1, statusMessage: err.message }); }
+});
+
+// Debug route to check saved sessions
+app.get('/api/check-sessions', (req, res) => {
+    try {
+        const sessions = JSON.parse(fs.readFileSync(SESSIONS_FILE, 'utf8'));
+        const unclaimed = sessions.filter(s => !s.claimed).length;
+        res.json({ 
+            status: "success",
+            total_sessions: sessions.length,
+            unclaimed_sessions: unclaimed,
+            last_saved_mobile: sessions.length > 0 ? sessions[sessions.length - 1].mobile : "None"
+        });
+    } catch (err) {
+        res.json({ status: "error", message: "No sessions saved yet or file empty" });
+    }
 });
 
 app.get('/', (req, res) => { res.sendFile(__dirname + '/index.html'); });
