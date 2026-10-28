@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Swiggy Session Generator</title>
     <style>
         :root { --bg: #0a0a0a; --card: #141414; --accent: #fc8019; --text: #eaeaea; --muted: #777; --err: #ff3b3b; --ok: #00c853; }
@@ -15,7 +15,7 @@
         .view.active { display: block; animation: fade 0.2s ease-out; }
         @keyframes fade { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         label { font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
-        input { width: 100%; padding: 14px; background: #000; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 1rem; outline: none; transition: border 0.2s; }
+        input { width: 100%; padding: 14px; background: #000; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 1rem; outline: none; transition: border 0.2s; -webkit-tap-highlight-color: transparent; }
         input:focus { border-color: var(--accent); }
         button { width: 100%; padding: 14px; background: var(--accent); border: none; border-radius: 6px; color: #000; font-weight: 800; font-size: 0.9rem; cursor: pointer; margin-top: 20px; text-transform: uppercase; letter-spacing: 1px; }
         button:hover { filter: brightness(1.1); }
@@ -34,14 +34,14 @@
 
     <div id="v1" class="view active">
         <label>Mobile Number (10 digits)</label>
-        <input type="text" id="inPhone" placeholder="9876543210" maxlength="10">
-        <button id="btn1" onclick="sendOtp()">Request OTP</button>
+        <input type="tel" inputmode="numeric" id="inPhone" placeholder="9876543210" maxlength="10" autocomplete="off">
+        <button type="button" id="btn1" onclick="sendOtp()">Request OTP</button>
     </div>
 
     <div id="v2" class="view">
         <label>OTP for <span id="showNum" style="color:var(--accent)"></span></label>
-        <input type="text" id="inOtp" placeholder="Enter OTP" maxlength="6">
-        <button id="btn2" onclick="verifyOtp()">Verify & Generate</button>
+        <input type="tel" inputmode="numeric" id="inOtp" placeholder="Enter OTP" maxlength="6" autocomplete="off">
+        <button type="button" id="btn2" onclick="verifyOtp()">Verify & Generate</button>
     </div>
 
     <div class="log" id="logs"></div>
@@ -95,10 +95,10 @@
                 go("v2");
             } else {
                 out("Failed: " + (d.statusMessage || 'Unknown error'), "e");
+                btn.disabled = false;
             }
         } catch (err) {
             out("Network error: " + err.message, "e");
-        } finally {
             btn.disabled = false;
         }
     }
@@ -115,7 +115,13 @@
             const r = await fetch(API + "/api/verify", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ otp: otp, tid: state.tid, sid: state.sid, deviceId: state.deviceId })
+                body: JSON.stringify({ 
+                    otp: otp, 
+                    phone: state.phone,
+                    tid: state.tid, 
+                    sid: state.sid, 
+                    deviceId: state.deviceId 
+                })
             });
             const d = await r.json();
 
@@ -155,6 +161,16 @@
             URL.revokeObjectURL(a.href);
 
             out("File downloaded.", "s");
+
+            setTimeout(() => {
+                state = {};
+                document.getElementById("inPhone").value = "";
+                document.getElementById("inOtp").value = "";
+                document.getElementById("logs").innerHTML = "";
+                go("v1");
+                out("Ready for next session!", "s");
+            }, 3000);
+
         } catch (err) {
             out("Network error: " + err.message, "e");
             btn.disabled = false;
